@@ -1,5 +1,5 @@
 #Importamos todas las librerías que vamos a necesitar para ejecutar las funciones que vamos a utilizar.
- #*Si nos aparece en amarilllo no signifca que haya errores sino que el kernel no lo entiende.*
+#*Si nos aparece en amarilllo no signifca que haya errores sino que el kernel no lo entiende.*
 
 import pandas as pd
 import numpy as np
@@ -66,54 +66,54 @@ def exploracion(dataframe):
 
     print("Principales estadísticos de las columnas categóricas:")
 
-    display(dataframe.describe(include="O").T)
+    try:
+
+        display(dataframe.describe(include="object").T)
+
+    except: print("No existen variables categóricas")
 
     print("Principales estadísticos de las columnas numéricas:")
 
-    display(dataframe.describe(exclude="O").T)
+    display(dataframe.describe(exclude="object").T)
 
     return df_info
 
+# Función de limpieza de negativos: 
+
+def limpiar_negativos(df, col="Salary"):
+    """
+    Limpia los valores negativos de una columna especificada.
+
+    Parámetros:  
+    - df (pd.DataFrame): DataFrame a procesar.
+    - col (str): Nombre de la columna donde eliminar valores negativos.
+
+    Retorna: 
+    - pd.DataFrame: DataFrame sin filas con valores negativos en la columna especificada.
+    """
+    # Eliminar filas con valores negativos
+    df_limpio = df[df[col] >= 0]
+    
+    return df_limpio
+
 # Función que testea la normalidad de los datos:
 
-def normalidad(dataframe, columna):
+#Función que testea la normalidad de los datos:
+def normalidad_dos_columnas(dataframe, columna1, columna2):
     """
-    Evalúa la normalidad de una columna de datos de un DataFrame utilizando la prueba de Shapiro-Wilk.
-    Parámetros:
-        dataframe (DataFrame): El DataFrame que contiene los datos.
-        columna (str): El nombre de la columna en el DataFrame que se va a evaluar para la normalidad.
-    Returns:
-        None: Imprime un mensaje indicando si los datos siguen o no una distribución normal.
+    Evalúa la normalidad de dos columnas de datos de un DataFrame utilizando la prueba de Shapiro-Wilk.
     """
-    statistic, p_value = stats.shapiro(dataframe[columna])
-    if p_value > 0.05:
-        print(f"Para la columna {columna} los datos siguen una distribución normal.")
-    else:
-        print(f"Para la columna {columna} los datos no siguen una distribución normal.")
+    for columna in [columna1, columna2]:
+        if not pd.api.types.is_numeric_dtype(dataframe[columna]):
+            print(f"La columna {columna} no es numérica y no puede evaluarse para normalidad.")
+            continue
 
-#Función que comprueba la homegeneidad: 
+        stat, p_value = shapiro(dataframe[columna])
+        if p_value > 0.05:
+            print(f"Para la columna {columna}, los datos siguen una distribución normal.")
+        else:
+            print(f"Para la columna {columna}, los datos no siguen una distribución normal.")
 
-def homogeneidad (dataframe, columna, columna_metrica):
-    """
-    Evalúa la homogeneidad de las varianzas entre grupos para una métrica específica en un DataFrame dado.
-    Parámetros:
-    - dataframe (DataFrame): El DataFrame que contiene los datos.
-    - columna (str): El nombre de la columna que se utilizará para dividir los datos en grupos.
-    - columna_metrica (str): El nombre de la columna que se utilizará para evaluar la homogeneidad de las varianzas.
-    Returns:
-    No devuelve nada directamente, pero imprime en la consola si las varianzas son homogéneas o no entre los grupos.
-    Se utiliza la prueba de Levene para evaluar la homogeneidad de las varianzas. Si el valor p resultante es mayor que 0.05,
-    se concluye que las varianzas son homogéneas; de lo contrario, se concluye que las varianzas no son homogéneas.
-    """
-    # lo primero que tenemos que hacer es crear tantos conjuntos de datos para cada una de las categorías que tenemos, Control Campaign y Test Campaign
-    valores_evaluar = []
-    for valor in dataframe[columna].unique():
-        valores_evaluar.append(dataframe[dataframe[columna]== valor][columna_metrica])
-    statistic, p_value = stats.levene(*valores_evaluar)
-    if p_value > 0.05:
-        print(f"Para la métrica {columna_metrica} las varianzas son homogéneas entre grupos.")
-    else:
-        print(f"Para la métrica {columna_metrica}, las varianzas no son homogéneas entre grupos.")
 
 # Función para calcular el test Mann-Whitney y ver si hay diferencias entre los grupos de estudio:
 
@@ -149,7 +149,25 @@ def test_man_whitney(dataframe, columnas_metricas, grupo_control, grupo_test, co
 test_man_whitney(df, metricas, "Control Campaign", "Test Campaign" )
 
 
-# Función para extraer info y ver categorías y subcategorías:
+#Alternativa al test Mann Whitnney: 
 
+from scipy.stats import mannwhitneyu
 
-# Función para calcular el intervalo de confianza en un 95% de confiabilidad:
+# Dividir en dos grupos por nivel educativo
+grupo_1 = ["High School or Below", "College", "Bachelor"]  # Menor nivel educativo
+grupo_2 = ["Master", "Doctor"]  # Mayor nivel educativo
+
+# Filtrar los datos según los grupos combinados
+datos_grupo_1 = datos_filtrados[datos_filtrados['Education'].isin(grupo_1)]['Flights Booked']
+datos_grupo_2 = datos_filtrados[datos_filtrados['Education'].isin(grupo_2)]['Flights Booked']
+
+# Realizar el test Mann-Whitney U
+u_stat, p_value = mannwhitneyu(datos_grupo_1, datos_grupo_2, alternative='two-sided')
+
+# Mostrar resultados
+if p_value < 0.05:
+    print(f"Las medianas entre los dos grupos combinados son significativamente diferentes (p-valor = {p_value:.4f}).")
+else:
+    print(f"No hay diferencias significativas entre las medianas de los dos grupos combinados (p-valor = {p_value:.4f}).")
+
+print(f"U-Statistic: {u_stat}")
